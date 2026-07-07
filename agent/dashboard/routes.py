@@ -5,6 +5,7 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 import httpx
@@ -987,6 +988,100 @@ async def list_repos(
             if r.get("full_name")
         ],
     }
+
+
+class JiraDispatchBody(BaseModel):
+    issue_key: str = ""
+    summary: str = ""
+    description: str = ""
+    repo_owner: str
+    repo_name: str
+
+
+@router.post("/jira/dispatch")
+async def jira_dispatch(
+    body: JiraDispatchBody,
+    session: dict[str, Any] = _SESSION_DEP,
+) -> dict[str, str]:
+    """Dispatch the agent to work on a Jira issue from the dashboard UI."""
+    from ..dispatch import dispatch_agent_run
+    from ..utils.jira import (
+        fetch_jira_issue,
+        format_jira_issue_for_prompt,
+        generate_thread_id_from_jira_issue,
+    )
+    from ..webapp import upsert_agent_thread_owner_metadata
+    from ..webhooks.jira import build_jira_issue_prompt
+
+    repo_config = {"owner": body.repo_owner, "name": body.repo_name}
+
+    issue_key = body.issue_key
+    triggered_by = session.get("sub", session.get("email", "Dashboard User"))
+
+    # If an issue_key was provided, try fetching from Jira API
+    issue_data: dict[str, Any] | None = None
+    if issue_key:
+        try:
+            issue_data = await fetch_jira_issue(issue_key)
+        except Exception:
+            logger.warning("Failed to fetch Jira issue %s, falling back to manual input", issue_key)
+
+    if issue_data:
+        formatted = format_jira_issue_for_prompt(issue_data)
+        summary = (issue_data.get("fields") or {}).get("summary", body.summary)
+        url = f"{os.environ.get('JIRA_BASE_URL', '').rstrip('/')}/browse/{issue_key}"
+    else:
+        if not issue_key:
+            issue_key = f"UI-{int(datetime.now(UTC).timestamp())}"
+        if not body.summary:
+            raise HTTPException(
+                400, "summary is required when issue_key is not provided or fetch fails"
+            )
+        summary = body.summary
+        url = ""
+        formatted = (
+            f"## Jira Issue: {issue_key}\n\n"
+            f"**Summary:** {summary}\n"
+            f"**Description:** {body.description or 'No description provided'}\n"
+        )
+
+    thread_id = generate_thread_id_from_jira_issue(issue_key)
+
+    prompt = build_jira_issue_prompt(
+        issue_key=issue_key,
+        formatted_issue=formatted,
+        repo_config=repo_config,
+        triggered_by=triggered_by,
+    )
+
+    configurable: dict[str, Any] = {
+        "repo": repo_config,
+        "jira_issue": {
+            "key": issue_key,
+            "summary": summary,
+            "url": url,
+        },
+        "source": "jira",
+        "plan_mode": False,
+        "__is_for_execution__": True,
+    }
+
+    await upsert_agent_thread_owner_metadata(
+        thread_id,
+        source="jira",
+        repo_config=repo_config,
+        title=summary,
+        source_context={"jira_issue": configurable["jira_issue"]},
+    )
+
+    run = await dispatch_agent_run(
+        thread_id,
+        prompt,
+        configurable,
+        source="jira",
+    )
+    run_id = run.get("run_id") if isinstance(run, dict) else None
+    return {"status": "ok", "thread_id": thread_id, "run_id": run_id or ""}
 
 
 @router.get("/review-styles")

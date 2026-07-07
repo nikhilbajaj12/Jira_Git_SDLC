@@ -1,5 +1,9 @@
 """Custom FastAPI routes for LangGraph server."""
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import hashlib
 import hmac
 import json
@@ -160,6 +164,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/")
+async def root():
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/docs")
+
 
 DASHBOARD_ALLOWED_ORIGINS: list[str] = [
     o.strip() for o in os.environ.get("DASHBOARD_ALLOWED_ORIGINS", "").split(",") if o.strip()
@@ -2055,9 +2067,9 @@ from .webhooks.github import (  # noqa: E402,F401
     process_github_review_finding_reply,
     trigger_pr_review_from_ref,
 )
+from .webhooks.jira import (  # noqa: E402,F401
+    process_jira_comment_event,
+    process_jira_issue_event,
+)
 from .webhooks.linear import process_linear_issue  # noqa: E402,F401
 from .webhooks.slack import process_slack_mention  # noqa: E402,F401
-from .webhooks.jira import (  # noqa: E402,F401
-    process_jira_issue_event,
-    process_jira_comment_event,
-)

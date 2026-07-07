@@ -306,6 +306,20 @@ export interface ReposPayload {
   repositories: Array<Repository>
 }
 
+export interface JiraDispatchBody {
+  issue_key?: string
+  summary: string
+  description?: string
+  repo_owner: string
+  repo_name: string
+}
+
+export interface JiraDispatchResponse {
+  status: string
+  thread_id: string
+  run_id?: string
+}
+
 export type ReviewStyleStatus = "idle" | "running" | "completed" | "failed"
 
 export interface ReviewStyle {
@@ -810,6 +824,11 @@ export const api = {
     request<ReviewCommentsPayload>(
       `/reviews/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${number}/comments`
     ),
+  jiraDispatch: (body: JiraDispatchBody) =>
+    request<JiraDispatchResponse>("/jira/dispatch", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   getReviewerEval: () => request<ReviewerEvalStatus>("/admin/evals/reviewer"),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 }

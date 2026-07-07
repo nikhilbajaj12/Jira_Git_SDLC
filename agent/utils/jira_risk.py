@@ -144,8 +144,7 @@ def score_jira_issue(issue: dict[str, Any]) -> RiskResult:
     ]
     if matched_patterns:
         reasons.append(
-            f"Description/comments mention high-risk patterns "
-            f"({len(matched_patterns)} matches)"
+            f"Description/comments mention high-risk patterns ({len(matched_patterns)} matches)"
         )
         score += len(matched_patterns)
 

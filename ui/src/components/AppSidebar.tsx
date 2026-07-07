@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import {
   IoArrowBackOutline,
+  IoBugOutline,
   IoCloudOutline,
   IoGitPullRequestOutline,
   IoOptionsOutline,
@@ -30,6 +31,7 @@ interface NavItem {
 const NAV: Array<NavItem> = [
   { to: "/my-settings", label: "Profile Settings", icon: IoOptionsOutline },
   { to: "/cloud-agents", label: "Open SWE Agent", icon: IoCloudOutline },
+  { to: "/jira", label: "Jira Issues", icon: IoBugOutline },
   { to: "/review", label: "Open SWE Review", icon: IoGitPullRequestOutline },
   { to: "/usage", label: "Usage", icon: IoStatsChartOutline },
   { to: "/admin", label: "Admin", icon: IoSettingsOutline, adminOnly: true },

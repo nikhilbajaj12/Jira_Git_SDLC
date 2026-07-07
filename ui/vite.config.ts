@@ -1,5 +1,5 @@
 import http from "node:http"
-import { defineConfig, type Plugin } from "vite"
+import {  defineConfig } from "vite"
 import { devtools } from "@tanstack/devtools-vite"
 import { tanstackStart } from "@tanstack/react-start/plugin/vite"
 import viteReact from "@vitejs/plugin-react"
@@ -7,6 +7,7 @@ import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
 import { VitePWA } from "vite-plugin-pwa"
+import type {Plugin} from "vite";
 
 // Dev-only: when E2E_HARNESS is set (the `dev:mock` local harness) serve the app
 // and the harness from one origin by proxying the API routes + the Yjs collab
@@ -60,7 +61,7 @@ function mockHarnessProxy(): Plugin | null {
           socket.write(
             `HTTP/1.1 ${proxyRes.statusCode} ${proxyRes.statusMessage}\r\n${lines}\r\n\r\n`
           )
-          if (proxyHead?.length) socket.write(proxyHead)
+          if (proxyHead.length) socket.write(proxyHead)
           if (head?.length) proxySocket.write(head)
           proxySocket.on("error", () => socket.destroy())
           socket.on("error", () => proxySocket.destroy())
@@ -74,46 +75,8 @@ function mockHarnessProxy(): Plugin | null {
   }
 }
 
-// shiki lazily `import()`s one grammar per language on first render. These libs
-// also only live inside lazy route components, so Vite's startup scanner never
-// reaches them — it discovers them on first thread navigation, re-optimizes deps,
-// and force-reloads, aborting the in-flight route-chunk import ("Failed to fetch
-// dynamically imported module"). Pre-bundling them up front avoids the reload.
-// Uncommon languages not listed just trigger a one-time, graceful re-optimize.
-const SHIKI_LANGS = [
-  "bash",
-  "c",
-  "cpp",
-  "csharp",
-  "css",
-  "diff",
-  "docker",
-  "go",
-  "graphql",
-  "html",
-  "java",
-  "javascript",
-  "json",
-  "jsonc",
-  "jsx",
-  "kotlin",
-  "lua",
-  "make",
-  "markdown",
-  "php",
-  "python",
-  "ruby",
-  "rust",
-  "scala",
-  "shellscript",
-  "sql",
-  "swift",
-  "toml",
-  "tsx",
-  "typescript",
-  "xml",
-  "yaml",
-]
+// shiki v4 bundles themes and languages internally.
+// Keeping just "shiki" here is sufficient for pre-bundling.
 
 const config = defineConfig({
   optimizeDeps: {
@@ -125,9 +88,6 @@ const config = defineConfig({
       "@pierre/diffs/react",
       "@pierre/trees",
       "@pierre/trees/react",
-      "@shikijs/themes/github-light",
-      "@shikijs/themes/github-dark",
-      ...SHIKI_LANGS.map((lang) => `@shikijs/langs/${lang}`),
     ],
   },
   worker: { format: "es" },

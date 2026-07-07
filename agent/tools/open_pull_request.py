@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 import httpx
@@ -26,16 +27,20 @@ _REFERENCES_HEADING = "## References"
 async def _resolve_pr_author_token() -> tuple[str | None, str]:
     """Return ``(token, kind)`` for opening the PR.
 
-    Prefers the triggering user's OAuth token (so the PR is created *as them*)
-    for Slack/dashboard runs with a mapped GitHub login, resolving it by login
-    from the dashboard OAuth store. Falls back to the GitHub App installation
-    token (creator = open-swe[bot]) for GitHub-triggered runs, unmapped users,
-    or bot-token-only deployments — preserving today's behavior.
+    Priority:
+    1. GITHUB_TOKEN env var (PoC env-token mode)
+    2. Triggering user's OAuth token (Slack/dashboard runs with mapped login)
+    3. GitHub App installation token (bot = open-swe[bot])
 
     The token is resolved by login rather than read from the shared thread
     metadata: Slack thread ids are shared across a conversation, so a cached
     token could belong to a prior triggering user.
     """
+    env_token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if env_token:
+        logger.info("Using GITHUB_TOKEN from environment for PR author")
+        return env_token, "env"
+
     configurable = get_config().get("configurable", {})
     source = configurable.get("source")
     github_login = configurable.get("github_login")

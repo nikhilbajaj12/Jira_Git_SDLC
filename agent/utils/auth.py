@@ -398,19 +398,35 @@ async def _resolve_bot_installation_token(thread_id: str) -> tuple[str, str | No
     return _cache_resolved_github_token(thread_id, bot_token, expires_at=expires_at)
 
 
+def _resolve_env_github_token() -> tuple[str, str | None] | None:
+    """Return ``(token, None)`` when GITHUB_TOKEN is set in the environment.
+
+    This is the PoC override: when the user sets GITHUB_TOKEN in .env, every
+    agent run uses that token directly, bypassing all OAuth flows.
+    """
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if token:
+        logger.info("Using GITHUB_TOKEN from environment (env-token mode)")
+        return token, None
+    return None
+
+
 async def resolve_github_token(config: RunnableConfig, thread_id: str) -> tuple[str, str | None]:
     """Resolve a GitHub token from the run config based on the source.
 
-    Routes to the correct auth method depending on whether the run was
-    triggered from GitHub (login-based) or Linear/Slack (email-based).
-
-    In bot-token-only mode (LANGSMITH_API_KEY_PROD set without
-    X_SERVICE_AUTH_JWT_SECRET), the GitHub App installation token is used
-    for all operations instead of per-user OAuth tokens.
+    Priority:
+    1. GITHUB_TOKEN env var (if set — PoC env-token mode)
+    2. Per-user OAuth from dashboard store (Slack/dashboard/schedule sources)
+    3. GitHub App installation token (bot-token-only mode)
+    4. LangSmith email-based resolution (Linear/GitHub sources)
 
     Raises:
         RuntimeError: If source is missing or token resolution fails.
     """
+    env_token = _resolve_env_github_token()
+    if env_token is not None:
+        return env_token
+
     configurable = config["configurable"]
     source = configurable.get("source")
     if not source:

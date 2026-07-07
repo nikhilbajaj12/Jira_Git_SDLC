@@ -129,6 +129,10 @@ SANDBOX_CREATING = "__creating__"
 SANDBOX_CREATION_TIMEOUT = 180
 SANDBOX_POLL_INTERVAL = 1.0
 
+from .dispatch import _langgraph_url
+
+client = get_client(url=_langgraph_url())
+
 from .utils.sandbox_state import (
     SANDBOX_BACKENDS,
     get_sandbox_id_from_metadata,
@@ -487,7 +491,10 @@ async def ensure_sandbox_for_thread(
             )
     elif sandbox_id is None:
         logger.info("Creating new sandbox for thread %s", thread_id)
-        await client.threads.update(thread_id=thread_id, metadata=_creating_metadata())
+        try:
+            await client.threads.update(thread_id=thread_id, metadata=_creating_metadata())
+        except Exception:
+            logger.warning("Failed to set creating metadata (in-memory runtime), continuing anyway")
         try:
             sandbox_backend = await _create_sandbox_with_proxy(
                 github_proxy_token,
@@ -510,7 +517,10 @@ async def ensure_sandbox_for_thread(
             sandbox_backend = await asyncio.to_thread(create_sandbox, sandbox_id)
         except Exception:
             logger.warning("Failed to connect to existing sandbox %s, creating new one", sandbox_id)
-            await client.threads.update(thread_id=thread_id, metadata=_creating_metadata())
+            try:
+                await client.threads.update(thread_id=thread_id, metadata=_creating_metadata())
+            except Exception:
+                logger.warning("Failed to set creating metadata (in-memory runtime), continuing anyway")
             try:
                 sandbox_backend = await _create_sandbox_with_proxy(
                     github_proxy_token,
@@ -536,9 +546,14 @@ async def ensure_sandbox_for_thread(
     sandbox_backend = set_sandbox_backend(thread_id, sandbox_backend)
 
     if sandbox_id != sandbox_backend.id:
-        await client.threads.update(
-            thread_id=thread_id, metadata={"sandbox_id": sandbox_backend.id}
-        )
+        try:
+            await client.threads.update(
+                thread_id=thread_id, metadata={"sandbox_id": sandbox_backend.id}
+            )
+        except Exception:
+            logger.warning(
+                "Failed to persist sandbox_id (in-memory runtime), continuing anyway"
+            )
 
     # Re-apply git identity every run: cached/reconnected sandboxes may have
     # lost their `--global` config (or had it overwritten), and Vercel preview

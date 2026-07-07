@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
 
 import {
-  DEFAULT_SIDEBAR_FILTERS,
-  type SidebarFilters,
-  type SidebarGroupMode,
+  DEFAULT_SIDEBAR_FILTERS
+  
+  
 } from "./sidebarFilter"
+import type {SidebarFilters, SidebarGroupMode} from "./sidebarFilter";
 
 const STORAGE_KEY = "open-swe.agents.sidebar-prefs"
 

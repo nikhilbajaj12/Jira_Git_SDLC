@@ -13,6 +13,7 @@ import { Route as UsageRouteImport } from './routes/usage'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as MySettingsRouteImport } from './routes/my-settings'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as JiraRouteImport } from './routes/jira'
 import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as CloudAgentsRouteImport } from './routes/cloud-agents'
 import { Route as AgentsRouteImport } from './routes/agents'
@@ -51,6 +52,11 @@ const MySettingsRoute = MySettingsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JiraRoute = JiraRouteImport.update({
+  id: '/jira',
+  path: '/jira',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntegrationsRoute = IntegrationsRouteImport.update({
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AgentsRouteWithChildren
   '/cloud-agents': typeof CloudAgentsRoute
   '/integrations': typeof IntegrationsRoute
+  '/jira': typeof JiraRoute
   '/login': typeof LoginRoute
   '/my-settings': typeof MySettingsRoute
   '/review': typeof ReviewRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/cloud-agents': typeof CloudAgentsRoute
   '/integrations': typeof IntegrationsRoute
+  '/jira': typeof JiraRoute
   '/login': typeof LoginRoute
   '/my-settings': typeof MySettingsRoute
   '/review': typeof ReviewRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/agents': typeof AgentsRouteWithChildren
   '/cloud-agents': typeof CloudAgentsRoute
   '/integrations': typeof IntegrationsRoute
+  '/jira': typeof JiraRoute
   '/login': typeof LoginRoute
   '/my-settings': typeof MySettingsRoute
   '/review': typeof ReviewRoute
@@ -234,6 +243,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/cloud-agents'
     | '/integrations'
+    | '/jira'
     | '/login'
     | '/my-settings'
     | '/review'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cloud-agents'
     | '/integrations'
+    | '/jira'
     | '/login'
     | '/my-settings'
     | '/review'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/cloud-agents'
     | '/integrations'
+    | '/jira'
     | '/login'
     | '/my-settings'
     | '/review'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   AgentsRoute: typeof AgentsRouteWithChildren
   CloudAgentsRoute: typeof CloudAgentsRoute
   IntegrationsRoute: typeof IntegrationsRoute
+  JiraRoute: typeof JiraRoute
   LoginRoute: typeof LoginRoute
   MySettingsRoute: typeof MySettingsRoute
   ReviewRoute: typeof ReviewRoute
@@ -348,6 +361,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jira': {
+      id: '/jira'
+      path: '/jira'
+      fullPath: '/jira'
+      preLoaderRoute: typeof JiraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/integrations': {
@@ -519,6 +539,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgentsRoute: AgentsRouteWithChildren,
   CloudAgentsRoute: CloudAgentsRoute,
   IntegrationsRoute: IntegrationsRoute,
+  JiraRoute: JiraRoute,
   LoginRoute: LoginRoute,
   MySettingsRoute: MySettingsRoute,
   ReviewRoute: ReviewRoute,

@@ -57,11 +57,9 @@ _ANTHROPIC_EFFORTS: set[AnthropicEffort] = {"low", "medium", "high", "xhigh", "m
 def _coerce_openai_chat_completions_kwargs(model_kwargs: dict[str, object]) -> None:
     if model_kwargs.get("use_responses_api") is not False:
         return
-    reasoning = model_kwargs.pop("reasoning", None)
-    if isinstance(reasoning, dict):
-        effort = reasoning.get("effort")
-        if isinstance(effort, str):
-            model_kwargs.setdefault("reasoning_effort", effort)
+    # Standard Chat Completions mode — drop any reasoning/thinking params since
+    # many OpenAI-compatible providers (e.g. GitHub Models) don't support them.
+    model_kwargs.pop("reasoning", None)
 
 
 def _configure_openai_responses_kwargs(model_kwargs: dict[str, object]) -> None:
@@ -87,10 +85,16 @@ def make_model(model_id: str, *, use_gateway: bool | None = None, **kwargs: Unpa
     model_kwargs.setdefault("max_retries", DEFAULT_MAX_RETRIES)
 
     if model_id.startswith("openai:"):
-        # Direct-provider default: Responses API over the OpenAI websocket base.
+        # When OPENAI_API_BASE is set, use standard Chat Completions (e.g. GitHub Models).
+        # Otherwise fall back to the Responses API over the OpenAI websocket base.
         # Gateway routing overrides this below (an HTTP(S) proxy can't carry wss).
-        model_kwargs["base_url"] = OPENAI_RESPONSES_WS_BASE_URL
-        model_kwargs["use_responses_api"] = True
+        custom_base = os.environ.get("OPENAI_API_BASE", "").strip()
+        if custom_base:
+            model_kwargs["base_url"] = custom_base
+            model_kwargs["use_responses_api"] = False
+        else:
+            model_kwargs["base_url"] = OPENAI_RESPONSES_WS_BASE_URL
+            model_kwargs["use_responses_api"] = True
 
     enabled = gateway_env_default() if use_gateway is None else use_gateway
     if enabled:

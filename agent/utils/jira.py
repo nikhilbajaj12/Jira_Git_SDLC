@@ -259,9 +259,7 @@ async def transition_jira_issue(issue_key: str, transition_name: str) -> bool:
             return False
 
         target = transition_name.lower()
-        matched = next(
-            (t for t in transitions if target in t.get("name", "").lower()), None
-        )
+        matched = next((t for t in transitions if target in t.get("name", "").lower()), None)
         if not matched:
             available = [t.get("name") for t in transitions]
             logger.warning(

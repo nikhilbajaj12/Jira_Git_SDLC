@@ -30,6 +30,20 @@ SUPPORTED_MODELS: list[ModelOption] = [
         "supports_images": True,
     },
     {
+        "id": "openai:gpt-4o",
+        "label": "GPT-4o (GitHub Models)",
+        "efforts": ["none"],
+        "default_effort": "none",
+        "supports_images": True,
+    },
+    {
+        "id": "openai:gpt-4o-mini",
+        "label": "GPT-4o Mini (GitHub Models)",
+        "efforts": ["none"],
+        "default_effort": "none",
+        "supports_images": True,
+    },
+    {
         "id": "openai:gpt-5.5",
         "label": "GPT-5.5",
         "efforts": ["none", "low", "medium", "high", "xhigh"],

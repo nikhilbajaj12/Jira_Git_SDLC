@@ -27,8 +27,13 @@ logger = logging.getLogger(__name__)
 class SandboxBackendProxy(SandboxBackendProtocol):
     """Stable per-thread backend handle whose target can be replaced."""
 
+    _WORK_DIR_CACHE_ATTR = "_open_swe_resolved_work_dir"
+
     def __init__(self, backend: SandboxBackendProtocol) -> None:
         self._backend = backend
+        work_dir = getattr(backend, self._WORK_DIR_CACHE_ATTR, None)
+        if work_dir:
+            setattr(self, self._WORK_DIR_CACHE_ATTR, work_dir)
 
     @property
     def current(self) -> SandboxBackendProtocol:

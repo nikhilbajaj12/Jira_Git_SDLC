@@ -15,8 +15,6 @@ import logging
 import os
 from typing import Any
 
-from langchain_core.messages.content import create_text_block
-
 from agent import webapp
 
 from ..utils.jira import (
@@ -24,7 +22,6 @@ from ..utils.jira import (
     fetch_jira_issue,
     format_jira_issue_for_prompt,
     generate_thread_id_from_jira_issue,
-    verify_jira_webhook_secret,
 )
 from ..utils.jira_risk import score_jira_issue
 
@@ -83,9 +80,7 @@ def build_jira_issue_prompt(
     )
 
 
-def build_jira_followup_prompt(
-    issue_key: str, comment_author: str, comment_body: str
-) -> str:
+def build_jira_followup_prompt(issue_key: str, comment_author: str, comment_body: str) -> str:
     """Build a follow-up prompt from a new Jira comment."""
     return (
         f"**{comment_author}** added a comment on Jira issue {issue_key}:\n\n"
@@ -156,19 +151,16 @@ async def process_jira_issue_event(payload: dict[str, Any]) -> dict[str, str]:
         triggered_by=reporter,
     )
 
-    content_blocks: list[Any] = [create_text_block(prompt)]
-
     configurable: dict[str, Any] = {
         "repo": repo_config,
         "jira_issue": {
             "key": issue_key,
             "summary": summary,
-            "url": (
-                f"{os.environ.get('JIRA_BASE_URL', '').rstrip('/')}/browse/{issue_key}"
-            ),
+            "url": (f"{os.environ.get('JIRA_BASE_URL', '').rstrip('/')}/browse/{issue_key}"),
         },
         "source": "jira",
         "plan_mode": risk.plan_mode_recommended,
+        "__is_for_execution__": True,
     }
 
     if risk.plan_mode_recommended:
@@ -188,7 +180,7 @@ async def process_jira_issue_event(payload: dict[str, Any]) -> dict[str, str]:
 
     run = await webapp.dispatch_agent_run(
         thread_id,
-        content_blocks,
+        prompt,
         configurable,
         source="jira",
         metadata=webapp._AGENT_VERSION_METADATA,
@@ -255,13 +247,14 @@ async def process_jira_comment_event(payload: dict[str, Any]) -> dict[str, str]:
             "summary": fields.get("summary", ""),
         },
         "user_email": comment_author_email,
+        "__is_for_execution__": True,
     }
     if repo_config:
         configurable["repo"] = repo_config
 
     run = await webapp.dispatch_agent_run(
         thread_id,
-        [create_text_block(prompt)],
+        prompt,
         configurable,
         source="jira",
         metadata=webapp._AGENT_VERSION_METADATA,

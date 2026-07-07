@@ -22,8 +22,13 @@ def create_local_sandbox(sandbox_id: str | None = None):
     root_dir = os.getenv("LOCAL_SANDBOX_ROOT_DIR", os.getcwd())
     os.makedirs(root_dir, exist_ok=True)
 
-    return LocalShellBackend(
+    backend = LocalShellBackend(
         root_dir=root_dir,
         virtual_mode=True,
         inherit_env=True,
     )
+    # Pre-cache the work directory so resolve_sandbox_work_dir returns
+    # immediately without running shell-command candidates (which fail on
+    # Windows because paths like C:\... don't start with /).
+    setattr(backend, "_open_swe_resolved_work_dir", root_dir)
+    return backend

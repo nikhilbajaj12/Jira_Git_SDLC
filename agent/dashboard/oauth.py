@@ -31,6 +31,8 @@ JWT_ALG = "HS256"
 GITHUB_APP_CLIENT_ID = os.environ.get("GITHUB_APP_CLIENT_ID", "")
 GITHUB_APP_CLIENT_SECRET = os.environ.get("GITHUB_APP_CLIENT_SECRET", "")
 
+_ENV_TOKEN_MODE = bool(os.environ.get("GITHUB_TOKEN") or os.environ.get("GITHUB_APP_PRIVATE_KEY"))
+
 
 def _secret() -> str:
     s = os.environ.get("DASHBOARD_JWT_SECRET", "")
@@ -200,9 +202,28 @@ def build_settings_url() -> str | None:
     return f"{frontend_base}{PROFILE_SETTINGS_PATH}"
 
 
+def synthetic_session() -> dict[str, Any]:
+    """Return a synthetic session when running in env-token-only mode.
+
+    Used when GITHUB_TOKEN (or GITHUB_APP_PRIVATE_KEY) is set in the
+    environment so the dashboard UI never prompts the user to log in.
+    """
+    GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "")
+    login = GITHUB_REPOSITORY.split("/")[0] if "/" in GITHUB_REPOSITORY else "env-user"
+    return {
+        "sub": login,
+        "email": f"{login}@env.local",
+        "avatar_url": None,
+        "iat": 0,
+        "exp": 2**31,
+    }
+
+
 def require_session(request: Request) -> dict[str, Any]:
     token = request.cookies.get(COOKIE_NAME)
     if not token:
+        if _ENV_TOKEN_MODE:
+            return synthetic_session()
         raise HTTPException(401, "not authenticated")
     return decode_session(token)
 
