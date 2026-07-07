@@ -58,6 +58,13 @@ SUPPORTED_MODELS: list[ModelOption] = [
         "supports_images": True,
     },
     {
+        "id": "openai:meta/llama-4-maverick-17b-128e-instruct",
+        "label": "Llama 4 Maverick (NVIDIA)",
+        "efforts": ["none", "low", "medium", "high"],
+        "default_effort": "medium",
+        "supports_images": False,
+    },
+    {
         "id": "fireworks:accounts/fireworks/models/kimi-k2p7-code",
         "label": "Kimi K2.7",
         "efforts": ["low", "medium", "high"],
