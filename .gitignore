@@ -8,6 +8,7 @@
 .yarn/install-state.gz
 .yarn/cache
 new.md
+.langgraph_stdout
 
 # testing
 /coverage
