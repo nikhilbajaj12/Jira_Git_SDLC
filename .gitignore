@@ -71,3 +71,6 @@ __pycache__/
 .eggs/
 
 # 
+.langgraph_pid
+
+.langgraph_stderr.txt
