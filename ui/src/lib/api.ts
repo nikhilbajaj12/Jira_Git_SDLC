@@ -318,6 +318,7 @@ export interface JiraDispatchResponse {
   status: string
   thread_id: string
   run_id?: string
+  error?: string
 }
 
 export type ReviewStyleStatus = "idle" | "running" | "completed" | "failed"

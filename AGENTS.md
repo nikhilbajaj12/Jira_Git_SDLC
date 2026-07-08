@@ -8,6 +8,38 @@ Open SWE is an open-source coding-agent framework built on **LangGraph** + **Dee
 
 A separate **reviewer** graph runs read-only code reviews on PRs, and a **review-style analyzer** graph learns per-repo review style from historical PRs.
 
+## Local Dev Environment
+
+**Windows 11 / Python 3.11 / Node 24 / pnpm 11.10 / venv `.venv`**
+
+**Ports:**
+- LangGraph server: `2026` (via `langgraph dev --port 2026`; port 2025 orphaned — TCP LISTENING with stale PIDs, can't free without reboot)
+- Frontend: `3000` (via `pnpm dev --port 3000`)
+- Port `2024` orphaned (TCP LISTENING from previous session, can't free without reboot)
+
+**To restart the server:** ports 2024 and 2025 have orphaned TCP sockets from a previous `langgraph dev` session (PIDs show LISTENING but `tasklist` reports no matching process). `net stop http` requires admin rights and kills SSDP/Spooler. Instead, start on an unused port and update `.env`:
+```powershell
+$env:PYTHONIOENCODING='utf-8'; langgraph dev --port 2026
+```
+
+**Required env vars (in `.env`):**
+- `GOOGLE_API_KEY` — Gemini 2.5 Flash
+- `DEFAULT_MODEL_ID=google_genai:gemini-2.5-flash`
+- `DEFAULT_MODEL_EFFORT=medium`
+- `JIRA_BASE_URL`, `JIRA_USER_EMAIL`, `JIRA_API_TOKEN`
+
+**Before `langgraph dev`:** `$env:PYTHONIOENCODING='utf-8'` (required on Windows 11 for Unicode).
+
+## LLM Provider Status
+
+**Working (only supported model):** Gemini 2.5 Flash (`google_genai:gemini-2.5-flash`). Confirmed working end-to-end: runs dispatched via LangGraph SDK complete successfully with correct Gemini responses.
+
+**Why only Gemini:** All non-Gemini providers have been removed from `agent/dashboard/options.py` `SUPPORTED_MODELS`. The fallback in `default_model_pair()` always returns `google_genai:gemini-2.5-flash`. This prevents accidental fallback to GitHub Models GPT-4o which would return "Never gonna give you up" lyrics (a canned GitHub Models test endpoint).
+
+**"Never gonna give you up" root cause (SOLVED):** The text was **never** from the Google Gen AI SDK test fixture. It came from the **GitHub Models API endpoint** (`models.inference.ai.azure.com`) when `OPENAI_API_KEY` / `OPENAI_API_BASE` were unset and the server fell back to `"openai:gpt-5.5"` from `DEFAULT_MODEL_ID` env default. The GitHub Models endpoint doesn't have a valid API token, so it returns canned test content (Rick Astley lyrics) instead of actual model output.
+
+**Pipeline status:** Runs execute correctly when dispatched via the LangGraph SDK (`client.runs.create()` with proper parameters). Earlier error threads (`status=error`, `input=null`) were caused by malformed raw HTTP requests to `POST /threads/{id}/runs` — the correct approach is to use the SDK, which handles parameter formatting.
+
 ## Commands
 
 Dependencies are managed with **uv**. Tests use pytest (`asyncio_mode = "auto"`). Lint/format is **ruff** (line-length 100, target py311). `requires-python = ">=3.11"`; `langgraph.json` pins the runtime to 3.12.

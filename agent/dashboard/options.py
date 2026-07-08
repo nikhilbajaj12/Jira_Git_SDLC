@@ -15,39 +15,12 @@ class ModelOption(TypedDict):
 
 
 SUPPORTED_MODELS: list[ModelOption] = [
+    # Only Gemini models are supported.
     {
-        "id": "anthropic:claude-opus-4-8",
-        "label": "Opus 4.8",
-        "efforts": ["low", "medium", "high", "xhigh", "max"],
-        "default_effort": "high",
-        "supports_images": True,
-    },
-    {
-        "id": "anthropic:claude-sonnet-5",
-        "label": "Sonnet 5",
-        "efforts": ["low", "medium", "high", "xhigh", "max"],
-        "default_effort": "high",
-        "supports_images": True,
-    },
-    {
-        "id": "openai:gpt-4o",
-        "label": "GPT-4o (GitHub Models)",
-        "efforts": ["none"],
-        "default_effort": "none",
-        "supports_images": True,
-    },
-    {
-        "id": "openai:gpt-4o-mini",
-        "label": "GPT-4o Mini (GitHub Models)",
-        "efforts": ["none"],
-        "default_effort": "none",
-        "supports_images": True,
-    },
-    {
-        "id": "openai:gpt-5.5",
-        "label": "GPT-5.5",
-        "efforts": ["none", "low", "medium", "high", "xhigh"],
-        "default_effort": "xhigh",
+        "id": "google_genai:gemini-2.5-flash",
+        "label": "Gemini 2.5 Flash",
+        "efforts": ["minimal", "low", "medium", "high"],
+        "default_effort": "medium",
         "supports_images": True,
     },
     {
@@ -57,56 +30,13 @@ SUPPORTED_MODELS: list[ModelOption] = [
         "default_effort": "medium",
         "supports_images": True,
     },
-    {
-        "id": "openai:meta/llama-4-maverick-17b-128e-instruct",
-        "label": "Llama 4 Maverick (NVIDIA)",
-        "efforts": ["none", "low", "medium", "high"],
-        "default_effort": "medium",
-        "supports_images": False,
-    },
-    {
-        "id": "fireworks:accounts/fireworks/models/kimi-k2p7-code",
-        "label": "Kimi K2.7",
-        "efforts": ["low", "medium", "high"],
-        "default_effort": "high",
-        "supports_images": False,
-    },
-    {
-        "id": "fireworks:accounts/fireworks/models/deepseek-v4-pro",
-        "label": "DeepSeek V4 Pro",
-        "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
-        "default_effort": "high",
-        "supports_images": False,
-    },
-    {
-        "id": "fireworks:accounts/fireworks/models/glm-5p2",
-        "label": "GLM 5.2",
-        "efforts": ["none", "high", "max"],
-        "default_effort": "high",
-        "supports_images": False,
-    },
-    # Azure OpenAI — deployment name after the colon, e.g. azure_openai:gpt-4.1-mini
-    # Loaded dynamically from AZURE_OPENAI_DEPLOYMENT env var so any deployment name works.
-    *(
-        [
-            {
-                "id": f"azure_openai:{os.environ['AZURE_OPENAI_DEPLOYMENT']}",
-                "label": f"Azure {os.environ['AZURE_OPENAI_DEPLOYMENT']}",
-                "efforts": ["none"],
-                "default_effort": "none",
-                "supports_images": True,
-            }
-        ]
-        if os.environ.get("AZURE_OPENAI_DEPLOYMENT")
-        else []
-    ),
 ]
 
 SUPPORTED_MODEL_IDS: frozenset[str] = frozenset(m["id"] for m in SUPPORTED_MODELS)
 
 # DEFAULT_MODEL_ID can be overridden via env var to use Azure OpenAI or any other provider.
 # Example: DEFAULT_MODEL_ID=azure_openai:gpt-4.1-mini
-DEFAULT_MODEL_ID: str = os.environ.get("DEFAULT_MODEL_ID", "openai:gpt-5.5")
+DEFAULT_MODEL_ID: str = os.environ.get("DEFAULT_MODEL_ID", "google_genai:gemini-2.5-flash")
 DEFAULT_MODEL_EFFORT: str = os.environ.get("DEFAULT_MODEL_EFFORT", "medium")
 
 
@@ -180,25 +110,13 @@ def provider_fallback_pair(model_id: object, effort: object = None) -> tuple[str
 
 
 def default_model_pair() -> tuple[str, str]:
-    """Hardcoded fallback (model_id, reasoning_effort) used when no team default is set."""
-    if DEFAULT_MODEL_ID in SUPPORTED_MODEL_IDS and model_supports_effort(
-        DEFAULT_MODEL_ID, DEFAULT_MODEL_EFFORT
-    ):
-        return DEFAULT_MODEL_ID, DEFAULT_MODEL_EFFORT
+    """Hardcoded fallback (model_id, reasoning_effort) used when no team default is set.
+    Always returns the first supported Gemini model.
+    """
     first = SUPPORTED_MODELS[0]
     return first["id"], first["default_effort"]
 
 
 def default_vision_model_pair() -> tuple[str, str]:
-    """Default OpenAI/Anthropic model pair to use when image input is required."""
-    if (
-        DEFAULT_MODEL_ID in SUPPORTED_MODEL_IDS
-        and model_supports_images(DEFAULT_MODEL_ID)
-        and model_supports_effort(DEFAULT_MODEL_ID, DEFAULT_MODEL_EFFORT)
-        and DEFAULT_MODEL_ID.startswith(("openai:", "anthropic:"))
-    ):
-        return DEFAULT_MODEL_ID, DEFAULT_MODEL_EFFORT
-    for model in SUPPORTED_MODELS:
-        if model["id"].startswith(("openai:", "anthropic:")) and model["supports_images"]:
-            return model["id"], model["default_effort"]
+    """Default model pair to use when image input is required. Gemini supports images."""
     return default_model_pair()

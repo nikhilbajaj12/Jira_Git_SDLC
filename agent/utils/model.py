@@ -112,15 +112,12 @@ def make_model(model_id: str, *, use_gateway: bool | None = None, **kwargs: Unpa
 def fallback_model_id_for(primary_model_id: str) -> str | None:
     """Return the cross-provider fallback model id for a given primary, if any.
 
-    Anthropic primaries fall back to OpenAI and vice versa. Returns ``None``
-    when the provider has no configured cross-provider fallback (e.g. Google,
-    local, or self-hosted providers we don't want to silently route off-host).
+    All provider primaries fall back to Gemini. Returns ``None``
+    for providers that are already Google (no self-fallback needed).
     """
-    if primary_model_id.startswith("anthropic:"):
-        return "openai:gpt-5.5"
-    if primary_model_id.startswith("openai:"):
-        return "anthropic:claude-opus-4-8"
-    return None
+    if primary_model_id.startswith("google_genai:"):
+        return None
+    return "google_genai:gemini-2.5-flash"
 
 
 def is_gemini_3_family(model_id: str) -> bool:

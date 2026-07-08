@@ -2,12 +2,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 
-import type { JiraDispatchBody, JiraDispatchResponse } from "@/lib/api"
+import type { JiraDispatchBody, JiraDispatchResponse, ApiError } from "@/lib/api"
 import { SettingsRow, SettingsSection } from "@/components/AppShell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { AlertCircle } from "lucide-react"
 import { api } from "@/lib/api"
 import { useRepos } from "@/lib/profile"
 import { RepoSelector } from "@/components/agents/RepoSelector"
@@ -28,10 +29,25 @@ export function JiraDispatchForm() {
     onSuccess: (data: JiraDispatchResponse) => {
       qc.invalidateQueries({ queryKey: ["agent-threads"] })
       setError(null)
+      if (!data.thread_id) {
+        setError("Agent was dispatched but no thread was created. Check server logs.")
+        return
+      }
+      if (data.status === "error") {
+        setError(data.error || "Agent dispatch failed on the server")
+        return
+      }
       navigate({ to: `/agents/${data.thread_id}` })
     },
     onError: (err: Error) => {
-      setError(err.message)
+      const apiErr = err as ApiError
+      if (apiErr.status === 401) {
+        setError("You need to log in again. Please refresh the page.")
+      } else if (apiErr.status === 403) {
+        setError("Access denied. Check your permissions.")
+      } else {
+        setError(err.message || "An unexpected error occurred. Check that the backend server is running.")
+      }
     },
   })
 
@@ -135,7 +151,13 @@ export function JiraDispatchForm() {
       </SettingsSection>
 
       {error && (
-        <p className="text-xs text-destructive">{error}</p>
+        <div className="rounded border border-red-500/50 bg-red-50 px-4 py-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
+          <span className="flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <span className="font-medium">Error</span>
+          </span>
+          <p className="mt-1">{error}</p>
+        </div>
       )}
 
       <div className="flex justify-end">

@@ -12,8 +12,25 @@ import { useState } from "react"
 
 import appCss from "../styles.css?url"
 import { makeQueryClient } from "@/lib/query"
+import type { ErrorComponentProps } from "@tanstack/react-router"
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem("open-swe-theme");var d=t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`
+
+function RouteErrorComponent({ error }: ErrorComponentProps) {
+  return (
+    <main className="container mx-auto p-4 pt-16">
+      <h1 className="text-2xl font-medium">Something went wrong</h1>
+      <p className="text-muted-foreground">
+        An unexpected error occurred. Please try refreshing the page.
+      </p>
+      {error && (
+        <pre className="mt-4 max-w-full overflow-auto rounded border border-border bg-muted p-4 text-xs text-muted-foreground">
+          {error.message}
+        </pre>
+      )}
+    </main>
+  )
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -33,6 +50,7 @@ export const Route = createRootRoute({
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
+  errorComponent: RouteErrorComponent,
   notFoundComponent: () => (
     <main className="container mx-auto p-4 pt-16">
       <h1 className="text-2xl font-medium">404</h1>

@@ -1074,14 +1074,36 @@ async def jira_dispatch(
         source_context={"jira_issue": configurable["jira_issue"]},
     )
 
-    run = await dispatch_agent_run(
-        thread_id,
-        prompt,
-        configurable,
-        source="jira",
-    )
-    run_id = run.get("run_id") if isinstance(run, dict) else None
-    return {"status": "ok", "thread_id": thread_id, "run_id": run_id or ""}
+    # Create an external process to dispatch the run, bypassing in-process HTTP
+    # loopback issues where the LangGraph server can't make HTTP calls to itself.
+    from ..dispatch import _langgraph_url
+    import asyncio, httpx
+
+    async def _dispatch_externally() -> dict[str, object]:
+        payload = {
+            "input": {"messages": [{"role": "user", "content": prompt}]},
+            "config": {
+                "configurable": configurable,
+                "metadata": {"source": "jira", "jira_issue": configurable.get("jira_issue")},
+            },
+            "assistant_id": "agent",
+            "multitask_strategy": "interrupt",
+            "if_not_exists": "create",
+        }
+        url = f"{_langgraph_url()}/threads/{thread_id}/runs"
+        def _post() -> dict[str, object]:
+            resp = httpx.post(url, json=payload, timeout=300)
+            resp.raise_for_status()
+            return resp.json()
+        return await asyncio.to_thread(_post)
+
+    try:
+        run = await _dispatch_externally()
+        run_id = run.get("run_id") if isinstance(run, dict) else None
+    except Exception as e:
+        logger.error("Failed to dispatch agent run for issue %s: %s", issue_key, e, exc_info=True)
+        return {"status": "error", "thread_id": thread_id, "run_id": "", "error": str(e)}
+    return {"status": "ok", "thread_id": thread_id, "run_id": run_id or ""}  # type: ignore[return-value]
 
 
 @router.get("/review-styles")
